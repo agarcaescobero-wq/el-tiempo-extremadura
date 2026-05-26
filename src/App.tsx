@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { WeatherApiResponse } from "./types";
 import { CityCard } from "./components/CityCard";
 import { WeatherIcon } from "./components/WeatherIcon";
 import { motion, AnimatePresence } from "motion/react";
@@ -31,23 +30,44 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch weather for all municipalities
+  // Fetch weather for all municipalities directly from Open-Meteo
   const fetchWeather = async (silent = false) => {
     if (!silent) {
       setLoading(true);
     }
     setError(null);
     try {
-      const res = await fetch("/api/weather");
+      const cities = [
+        { key: "caceres", name: "Cáceres", lat: 39.4764, lon: -6.3722 },
+        { key: "badajoz", name: "Badajoz", lat: 38.8778, lon: -6.9706 },
+        { key: "coria", name: "Coria", lat: 39.9831, lon: -6.5361 },
+        { key: "plasencia", name: "Plasencia", lat: 40.0302, lon: -6.0894 },
+        { key: "navalmoral", name: "Navalmoral de la Mata", lat: 39.8916, lon: -5.5414 },
+        { key: "valenciaAlcantara", name: "Valencia de Alcántara", lat: 39.4128, lon: -7.2435 },
+        { key: "trujillo", name: "Trujillo", lat: 39.4597, lon: -5.8812 },
+        { key: "zorita", name: "Zorita", lat: 39.2847, lon: -5.6991 },
+        { key: "jerez", name: "Jerez de los Caballeros", lat: 38.3204, lon: -6.7725 },
+        { key: "castuera", name: "Castuera", lat: 38.7231, lon: -5.5435 },
+        { key: "merida", name: "Mérida", lat: 38.9161, lon: -6.3437 },
+        { key: "donBenito", name: "Don Benito", lat: 38.9554, lon: -5.8614 },
+        { key: "herrera", name: "Herrera del Duque", lat: 39.1681, lon: -5.0506 },
+        { key: "zafra", name: "Zafra", lat: 38.4233, lon: -6.4172 },
+        { key: "azuaga", name: "Azuaga", lat: 38.2588, lon: -5.6775 },
+      ];
+      const lats = cities.map(c => c.lat).join(",");
+      const lons = cities.map(c => c.lon).join(",");
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,uv_index_max,weather_code&timezone=Europe/Madrid&forecast_days=7`;
+      const res = await fetch(url);
       if (!res.ok) {
         throw new Error("No se pudo obtener la información meteorológica. Inténtalo de nuevo.");
       }
-      const responseJson: WeatherApiResponse = await res.json();
-      if (responseJson.success) {
-        setData(responseJson.data);
-      } else {
-        throw new Error("Error devuelto por el servidor climatológico de Extremadura.");
-      }
+      const json = await res.json();
+      const results = Array.isArray(json) ? json : [json];
+      const weatherData: Record<string, any> = {};
+      cities.forEach((city, index) => {
+        weatherData[city.key] = results[index];
+      });
+      setData(weatherData as any);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Error al conectar con la estación meteorológica.");
